@@ -8,6 +8,7 @@ import { ResearchPage } from './pages/ResearchPage';
 import { BuildPage } from './pages/BuildPage';
 import { ExportPage } from './pages/ExportPage';
 import { TurkishApp } from './pages/turkish/TurkishApp';
+import { PianoApp } from './pages/piano/PianoApp';
 import { useCourseStore } from './store/courseStore';
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
           <Route path="/export" element={<ExportPage />} />
         </Route>
         <Route path="/turkish/*" element={<TurkishApp />} />
+        <Route path="/piano/*" element={<PianoApp />} />
       </Routes>
     </BrowserRouter>
   );
