@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface AudioButtonProps {
   text: string;
@@ -7,19 +7,71 @@ interface AudioButtonProps {
   size?: 'sm' | 'md';
 }
 
+// Resolve voices, waiting for voiceschanged if needed (Chrome loads async)
+function getVoices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise(resolve => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) return resolve(voices);
+    const handler = () => resolve(window.speechSynthesis.getVoices());
+    window.speechSynthesis.addEventListener('voiceschanged', handler, { once: true });
+    // Safety timeout — resolve even if event never fires
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+  });
+}
+
 export function AudioButton({ text, lang = 'tr-TR', className = '', size = 'md' }: AudioButtonProps) {
   const [playing, setPlaying] = useState(false);
+  const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const speak = () => {
-    if (!window.speechSynthesis || playing) return;
+  // Pre-warm voice list on mount so first click is instant
+  useEffect(() => { getVoices(); }, []);
+
+  const speak = async () => {
+    if (!window.speechSynthesis) return;
+
+    // Stop if already playing
+    if (playing) {
+      window.speechSynthesis.cancel();
+      setPlaying(false);
+      return;
+    }
+
     window.speechSynthesis.cancel();
+
+    const voices = await getVoices();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = lang;
-    utt.rate = 0.85;
-    utt.onstart = () => setPlaying(true);
+    utt.rate = 0.82;
+
+    // Prefer an exact Turkish voice; fall back to any tr- voice; then no voice (browser uses lang)
+    const trVoice =
+      voices.find(v => v.lang === lang) ??
+      voices.find(v => v.lang.startsWith('tr')) ??
+      null;
+    if (trVoice) utt.voice = trVoice;
+
+    uttRef.current = utt;
+
+    // Set playing immediately — onstart is unreliable in Chrome
+    setPlaying(true);
+
     utt.onend = () => setPlaying(false);
     utt.onerror = () => setPlaying(false);
+
     window.speechSynthesis.speak(utt);
+
+    // Chrome bug: speech can get paused when tab loses focus briefly; resume it
+    const resume = setInterval(() => {
+      if (!window.speechSynthesis.speaking) {
+        clearInterval(resume);
+        setPlaying(false);
+      } else if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }, 200);
+
+    utt.onend = () => { clearInterval(resume); setPlaying(false); };
+    utt.onerror = () => { clearInterval(resume); setPlaying(false); };
   };
 
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
@@ -28,7 +80,7 @@ export function AudioButton({ text, lang = 'tr-TR', className = '', size = 'md' 
   return (
     <button
       onClick={speak}
-      title="Pronounce"
+      title={playing ? 'Stop' : 'Pronounce in Turkish'}
       className={`${btnSize} rounded-full transition-all ${
         playing
           ? 'bg-red-500/20 text-red-400'
