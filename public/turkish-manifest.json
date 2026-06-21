@@ -1,0 +1,19 @@
+{
+  "name": "Turkish in 2 Months",
+  "short_name": "Türkçe",
+  "description": "Learn conversational Turkish in 2 months — optimized for Persian & English speakers",
+  "start_url": "/turkish",
+  "scope": "/turkish",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#c1121f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/turkish-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
